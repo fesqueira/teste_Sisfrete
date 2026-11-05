@@ -36,11 +36,12 @@ class AuthController extends Controller
 
         Log::info('Login realizado', ['user_id' => $user->id]);
 
-        return response()->json([
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'user' => new UserResource($user),
-        ]);
+        return (new UserResource($user))
+            ->additional([
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ])
+            ->response();
     }
 
     public function logout(Request $request): Response
