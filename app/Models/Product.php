@@ -26,7 +26,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['sku', 'name', 'description', 'price', 'weight_kg', 'height_cm', 'width_cm', 'length_cm', 'stock', 'active'])]
-
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */

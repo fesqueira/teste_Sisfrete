@@ -23,7 +23,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'zip_code', 'user_id'])]
-
 class Address extends Model
 {
     /** @use HasFactory<AddressFactory> */
