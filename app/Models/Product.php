@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -53,5 +55,31 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->where('active', true);
+    }
+
+    #[Scope]
+    protected function inCategory(Builder $query, string $slug): void
+    {
+        $query->whereHas('categories', fn (Builder $categories) => $categories->where('slug', $slug));
+    }
+
+    #[Scope]
+    protected function search(Builder $query, string $term): void
+    {
+        $query->where('name', 'like', '%'.$term.'%');
+    }
+
+    #[Scope]
+    protected function priceBetween(Builder $query, ?float $min, ?float $max): void
+    {
+        $query
+            ->when($min !== null, fn (Builder $query) => $query->where('price', '>=', $min))
+            ->when($max !== null, fn (Builder $query) => $query->where('price', '<=', $max));
     }
 }
