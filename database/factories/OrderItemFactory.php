@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +20,10 @@ class OrderItemFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'order_id' => Order::factory(),
+            'product_id' => Product::factory(),
+            'quantity' => fake()->numberBetween(1, 10),
+            'price' => fn (array $attributes) => Product::find($attributes['product_id'])->price,
         ];
     }
 }
