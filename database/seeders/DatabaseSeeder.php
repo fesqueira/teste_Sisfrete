@@ -17,18 +17,17 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         // Usuário fixo para teste de API
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::factory()
+            ->has(Address::factory()->count(2))
+            ->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
 
-        // Catalogo
+        // Catálogo
         $categories = Category::factory()->count(8)->create();
         $products = Product::factory()->count(50)->create();
         $products->each(fn (Product $product) => $product->categories()->attach($categories->random(rand(1, 3))));
@@ -60,6 +59,7 @@ class DatabaseSeeder extends Seeder
                 }
 
                 $subtotal = $order->items()->sum(DB::raw('price * quantity'));
+
                 $order->update([
                     'subtotal' => $subtotal,
                     'total' => $subtotal + $order->shipping_cost,
@@ -70,9 +70,7 @@ class DatabaseSeeder extends Seeder
                         ->for($order)
                         ->create(['paid_at' => $order->created_at]);
                 }
-
             }
         }
-
     }
 }
