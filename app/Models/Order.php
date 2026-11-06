@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,6 +31,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'status' => OrderStatus::class,
             'subtotal' => 'decimal:2',
             'shipping_cost' => 'decimal:2',
             'total' => 'decimal:2',

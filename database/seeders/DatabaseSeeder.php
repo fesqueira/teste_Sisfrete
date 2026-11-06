@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
                     'total' => $subtotal + $order->shipping_cost,
                 ]);
 
-                if (! in_array($order->status, ['pending', 'cancelled'])) {
+                if ($order->status->isPaid()) {
                     Payment::factory()
                         ->for($order)
                         ->create(['paid_at' => $order->created_at]);
