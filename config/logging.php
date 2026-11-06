@@ -72,6 +72,13 @@ return [
             'max_files' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
         ],
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => 14,
+            'replace_placeholders' => true,
+        ],
 
         'monthly' => [
             'driver' => 'monthly',
