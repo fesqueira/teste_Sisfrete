@@ -34,5 +34,15 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'freight' => [
+        'url' => env('FREIGHT_API_URL', 'https://api.transportadora.example/v1'),
+        'token' => env('FREIGHT_API_TOKEN'),
+        'origin_zip_code' => env('FREIGHT_ORIGIN_ZIP_CODE', '17500000'),
+        'connect_timeout' => (int) env('FREIGHT_CONNECT_TIMEOUT', 2),
+        'timeout' => (int) env('FREIGHT_TIMEOUT', 5),
+        'retries' => (int) env('FREIGHT_RETRIES', 3),
+        'simulate' => (bool) env('FREIGHT_SIMULATE', false),
+        'simulated_failure_rate' => (int) env('FREIGHT_SIMULATED_FAILURE_RATE', 20),
+    ],
 
 ];

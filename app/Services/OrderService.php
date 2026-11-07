@@ -6,15 +6,28 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Freight\FreightQuoter;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    public function __construct(private FreightQuoter $freightQuoter) {}
+
     public function create(User $user, int $addressId, array $items): Order
     {
-        return DB::transaction(function () use ($user, $addressId, $items) {
+        $address = $user->addresses()->findOrFail($addressId);
+
+        $products = Product::query()
+            ->whereIn('id', array_column($items, 'product_id'))
+            ->get()
+            ->keyBy('id');
+
+        $freightQuote = $this->freightQuoter->quote($address->zip_code, $this->packages($items, $products));
+
+        return DB::transaction(function () use ($user, $address, $items, $freightQuote) {
             $products = Product::query()
                 ->whereIn('id', array_column($items, 'product_id'))
                 ->lockForUpdate()
@@ -22,10 +35,10 @@ class OrderService
                 ->keyBy('id');
 
             $order = $user->orders()->create([
-                'address_id' => $addressId,
+                'address_id' => $address->id,
                 'status' => OrderStatus::Pending,
                 'subtotal' => 0,
-                'shipping_cost' => 0,
+                'shipping_cost' => $freightQuote->price,
                 'total' => 0,
             ]);
 
@@ -60,6 +73,7 @@ class OrderService
                 'order_id' => $order->id,
                 'user_id' => $user->id,
                 'total' => $order->total,
+                'shipping_cost' => $order->shipping_cost,
             ]);
 
             return $order;
@@ -87,5 +101,20 @@ class OrderService
 
             return $order;
         });
+    }
+
+    private function packages(array $items, Collection $products): array
+    {
+        return array_map(function (array $item) use ($products) {
+            $product = $products->get($item['product_id']);
+
+            return [
+                'weight_kg' => (float) $product->weight_kg,
+                'height_cm' => (float) $product->height_cm,
+                'width_cm' => (float) $product->width_cm,
+                'length_cm' => (float) $product->length_cm,
+                'quantity' => $item['quantity'],
+            ];
+        }, $items);
     }
 }

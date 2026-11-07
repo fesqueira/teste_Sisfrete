@@ -4,6 +4,7 @@ use App\Models\Address;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
@@ -13,7 +14,15 @@ beforeEach(function () {
     Sanctum::actingAs($this->user);
 });
 
-test('cria pedido usando o preço do banco e baixa o estoque', function () {
+function fakeFreightQuote(float $price = 15.5): void
+{
+    Http::fake([
+        '*' => Http::response(['service' => 'Padrão', 'price' => $price, 'deadline_days' => 3]),
+    ]);
+}
+
+test('cria pedido usando o preço do banco, soma o frete e baixa o estoque', function () {
+    fakeFreightQuote(15.5);
     $product = Product::factory()->create(['price' => 40, 'stock' => 10]);
 
     $response = $this->postJson(route('api.v1.orders.store'), [
@@ -24,12 +33,15 @@ test('cria pedido usando o preço do banco e baixa o estoque', function () {
     $response->assertCreated()
         ->assertJsonPath('data.status', 'pending')
         ->assertJsonPath('data.items.0.unit_price', '40.00')
-        ->assertJsonPath('data.total', '80.00');
+        ->assertJsonPath('data.subtotal', '80.00')
+        ->assertJsonPath('data.shipping_cost', '15.50')
+        ->assertJsonPath('data.total', '95.50');
 
     expect($product->fresh()->stock)->toBe(8);
 });
 
 test('desfaz o pedido inteiro quando um item não tem estoque', function () {
+    fakeFreightQuote();
     $available = Product::factory()->create(['stock' => 10]);
     $unavailable = Product::factory()->create(['stock' => 1]);
 
@@ -70,6 +82,7 @@ test('recusa transição de status inválida', function () {
 });
 
 test('cancelar o pedido devolve o estoque', function () {
+    fakeFreightQuote();
     $product = Product::factory()->create(['stock' => 10]);
 
     $orderId = $this->postJson(route('api.v1.orders.store'), [
