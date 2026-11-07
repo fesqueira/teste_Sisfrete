@@ -96,3 +96,22 @@ test('cancelar o pedido devolve o estoque', function () {
 
     expect($product->fresh()->stock)->toBe(10);
 });
+
+test('trocar o endereço recalcula o frete e o total', function () {
+    Http::fake(['*' => Http::sequence()
+        ->push(['service' => 'Padrão', 'price' => 15.5, 'deadline_days' => 3])
+        ->push(['service' => 'Padrão', 'price' => 30, 'deadline_days' => 5])]);
+    $product = Product::factory()->create(['price' => 40, 'stock' => 10]);
+    $newAddress = Address::factory()->for($this->user)->create();
+
+    $orderId = $this->postJson(route('api.v1.orders.store'), [
+        'address_id' => $this->address->id,
+        'items' => [['product_id' => $product->id, 'quantity' => 2]],
+    ])->json('data.id');
+
+    $this->patchJson(route('api.v1.orders.update', $orderId), ['address_id' => $newAddress->id])
+        ->assertOk()
+        ->assertJsonPath('data.address.id', $newAddress->id)
+        ->assertJsonPath('data.shipping_cost', '30.00')
+        ->assertJsonPath('data.total', '110.00');
+});

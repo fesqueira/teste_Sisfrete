@@ -82,8 +82,32 @@ class OrderService
 
     public function update(Order $order, array $data): Order
     {
-        return DB::transaction(function () use ($order, $data) {
+        $freightQuote = null;
+
+        if (isset($data['address_id']) && $data['address_id'] !== $order->address_id) {
+            $address = $order->user->addresses()->findOrFail($data['address_id']);
+            $order->load('items.product');
+
+            $freightQuote = $this->freightQuoter->quote($address->zip_code, $this->packages(
+                $order->items->map(fn ($item) => ['product_id' => $item->product_id, 'quantity' => $item->quantity])->all(),
+                $order->items->pluck('product')->keyBy('id'),
+            ));
+        }
+
+        return DB::transaction(function () use ($order, $data, $freightQuote) {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
             $previousStatus = $order->status;
+
+            if (isset($data['status']) && ! $previousStatus->canTransitionTo(OrderStatus::from($data['status']))) {
+                throw ValidationException::withMessages([
+                    'status' => "Não é possível mudar o status de {$previousStatus->value} para {$data['status']}.",
+                ]);
+            }
+
+            if ($freightQuote) {
+                $data['shipping_cost'] = $freightQuote->price;
+                $data['total'] = round($order->subtotal + $freightQuote->price, 2);
+            }
 
             $order->update($data);
 
@@ -97,6 +121,7 @@ class OrderService
                 'order_id' => $order->id,
                 'from' => $previousStatus->value,
                 'to' => $order->status->value,
+                'shipping_cost' => $order->shipping_cost,
             ]);
 
             return $order;
